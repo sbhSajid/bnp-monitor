@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>নজরদারি — জনস্বার্থ পর্যবেক্ষণ ড্যাশবোর্ড</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tiro+Bangla:ital@0;1&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#121B24;
+    --panel:#1A2733;
+    --panel-2:#20303E;
+    --border:#2B3B4A;
+    --text:#EDEAE2;
+    --text-dim:#93A2AF;
+    --amber:#E0A72E;
+    --amber-dim:rgba(224,167,46,0.14);
+    --green:#4C9A6A;
+    --green-dim:rgba(76,154,106,0.14);
+    --red:#C1553D;
+    --red-dim:rgba(193,85,61,0.14);
+    --blue:#5B84A8;
+    --blue-dim:rgba(91,132,168,0.14);
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Hind Siliguri', sans-serif;
+    line-height:1.55;
+  }
+  h1,h2,h3,.serif{font-family:'Tiro Bangla', serif;}
+  ::selection{background:var(--amber-dim);}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* Header */
+  header{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:1px solid var(--border);
+    padding-bottom:18px;margin-bottom:22px;
+    flex-wrap:wrap;gap:10px;
+  }
+  header h1{font-size:1.7rem;font-weight:400;margin:0 0 4px;color:var(--text);}
+  header .sub{color:var(--text-dim);font-size:0.88rem;}
+  header .meta{text-align:right;color:var(--text-dim);font-size:0.85rem;}
+  header .meta .live{color:var(--green);}
+
+  /* Controls */
+  .controls{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    margin-bottom:24px;
+  }
+  .range-btns{display:flex;gap:6px;flex-wrap:wrap;}
+  .range-btns button{
+    background:var(--panel);border:1px solid var(--border);color:var(--text-dim);
+    padding:7px 14px;border-radius:var(--radius);cursor:pointer;font-family:inherit;font-size:0.85rem;
+    transition:all .15s;
+  }
+  .range-btns button:hover{color:var(--text);border-color:var(--amber);}
+  .range-btns button.active{background:var(--amber-dim);border-color:var(--amber);color:var(--amber);}
+  .date-custom{display:flex;gap:6px;align-items:center;}
+  .date-custom input{
+    background:var(--panel);border:1px solid var(--border);color:var(--text);
+    padding:6px 8px;border-radius:var(--radius);font-family:inherit;font-size:0.82rem;
+  }
+  .search-box{
+    margin-left:auto;background:var(--panel);border:1px solid var(--border);
+    padding:7px 12px;border-radius:var(--radius);color:var(--text);font-family:inherit;
+    font-size:0.85rem;min-width:200px;
+  }
+
+  /* KPI strip */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
+  .kpi .num{font-family:'Tiro Bangla',serif;font-size:2rem;color:var(--text);}
+  .kpi .label{color:var(--text-dim);font-size:0.82rem;margin-top:2px;}
+  .kpi .delta{font-size:0.78rem;margin-top:6px;}
+  .delta.up{color:var(--red);}
+  .delta.down{color:var(--green);}
+
+  /* Panels/charts */
+  .grid-2{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-bottom:14px;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .panel h2{font-size:1.05rem;font-weight:400;margin:0 0 14px;color:var(--text);}
+  .panel .chart-box{position:relative;height:220px;}
+
+  /* Leaderboard */
+  .lb-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem;
+  }
+  .lb-row:last-child{border-bottom:none;}
+  .lb-name{color:var(--text);}
+  .lb-count{
+    background:var(--amber-dim);color:var(--amber);
+    border-radius:10px;padding:1px 10px;font-size:0.78rem;font-family:'Tiro Bangla',serif;
+  }
+
+  /* Warnings & Recommendations */
+  .alert-list{display:flex;flex-direction:column;gap:8px;}
+  .alert{
+    display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius);
+    border-left:3px solid var(--amber);background:var(--amber-dim);font-size:0.88rem;
+  }
+  .alert.high{border-left-color:var(--red);background:var(--red-dim);}
+  .alert .mark{font-family:'Tiro Bangla',serif;color:var(--amber);flex-shrink:0;}
+  .alert.high .mark{color:var(--red);}
+  .rec{
+    display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius);
+    border-left:3px solid var(--green);background:var(--green-dim);font-size:0.88rem;
+  }
+
+  /* Filters + Ledger */
+  .filter-row{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 12px;}
+  .filter-row select{
+    background:var(--panel);border:1px solid var(--border);color:var(--text);
+    padding:7px 10px;border-radius:var(--radius);font-family:inherit;font-size:0.82rem;
+  }
+  .ledger{border-top:1px solid var(--border);}
+  .ledger-row{
+    display:grid;grid-template-columns:90px 100px 1fr 160px 120px;gap:14px;
+    padding:13px 4px;border-bottom:1px solid var(--border);font-size:0.87rem;align-items:start;
+  }
+  .ledger-row .date{color:var(--text-dim);font-variant-numeric:tabular-nums;}
+  .ledger-row .district{color:var(--text-dim);}
+  .ledger-row .headline a{color:var(--text);text-decoration:none;}
+  .ledger-row .headline a:hover{color:var(--amber);text-decoration:underline;}
+  .ledger-row .headline .tags{margin-top:4px;}
+  .tag{
+    display:inline-block;font-size:0.72rem;color:var(--blue);background:var(--blue-dim);
+    border-radius:8px;padding:1px 8px;margin-right:5px;margin-top:3px;
+  }
+  .ledger-row .leader{color:var(--text-dim);font-size:0.82rem;}
+  .status-badge{font-size:0.76rem;border-radius:8px;padding:2px 9px;display:inline-block;}
+  .status-badge.action{background:var(--green-dim);color:var(--green);}
+  .status-badge.pending{background:var(--amber-dim);color:var(--amber);}
+
+  .empty-note{color:var(--text-dim);padding:30px 10px;text-align:center;font-size:0.9rem;}
+
+  footer{margin-top:40px;color:var(--text-dim);font-size:0.78rem;border-top:1px solid var(--border);padding-top:16px;}
+
+  @media (max-width:820px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .grid-2{grid-template-columns:1fr;}
+    .ledger-row{grid-template-columns:1fr;gap:4px;}
+    .search-box{margin-left:0;width:100%;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>নজরদারি</h1>
+      <div class="sub">দলীয় শৃঙ্খলাভঙ্গ সংক্রান্ত সংবাদ পর্যবেক্ষণ — সোর্স: গুগল নিউজ</div>
+    </div>
+    <div class="meta">
+      <div>সর্বশেষ আপডেট: <span id="lastUpdated">—</span></div>
+      <div class="live" id="liveStatus">● লাইভ ডেটা</div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="range-btns" id="rangeBtns">
+      <button data-range="7" class="active">গত ৭ দিন</button>
+      <button data-range="30">গত ৩০ দিন</button>
+      <button data-range="all">সব সময়</button>
+    </div>
+    <div class="date-custom">
+      <input type="date" id="fromDate">
+      <span style="color:var(--text-dim)">—</span>
+      <input type="date" id="toDate">
+      <button id="applyCustom" style="background:var(--panel);border:1px solid var(--border);color:var(--text-dim);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.82rem;">প্রয়োগ করুন</button>
+    </div>
+    <input type="text" class="search-box" id="searchBox" placeholder="নাম, জেলা বা শিরোনাম খুঁজুন…">
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="num" id="kpiTotal">0</div><div class="label">মোট ঘটনা (নির্বাচিত সময়ে)</div></div>
+    <div class="kpi"><div class="num" id="kpiDistricts">0</div><div class="label">সক্রিয় জেলা</div></div>
+    <div class="kpi"><div class="num" id="kpiPending">0</div><div class="label">ব্যবস্থা এখনো বাকি</div></div>
+    <div class="kpi"><div class="num" id="kpiTrend">—</div><div class="label">আগের সময়ের তুলনায়</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>সময়ের সাথে ঘটনার প্রবণতা</h2>
+      <div class="chart-box"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>অভিযোগের ধরন অনুযায়ী</h2>
+      <div class="chart-box"><canvas id="categoryChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>জেলাভিত্তিক ঘটনা</h2>
+      <div class="chart-box"><canvas id="districtChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>বারবার নাম আসা ব্যক্তি/এলাকা</h2>
+      <div id="leaderboard"></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>⚠ সতর্কতা</h2>
+      <div class="alert-list" id="warnings"></div>
+    </div>
+    <div class="panel">
+      <h2>সুপারিশ</h2>
+      <div class="alert-list" id="recommendations"></div>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <select id="filterCategory"><option value="">সব ক্যাটাগরি</option></select>
+    <select id="filterDistrict"><option value="">সব জেলা</option></select>
+    <select id="filterStatus">
+      <option value="">সব স্ট্যাটাস</option>
+      <option value="action">ব্যবস্থা নেওয়া হয়েছে</option>
+      <option value="pending">এখনো বাকি</option>
+    </select>
+  </div>
+
+  <div class="ledger" id="ledger"></div>
+
+  <footer>
+    এই ড্যাশবোর্ড স্বয়ংক্রিয়ভাবে Google News থেকে সংগৃহীত তথ্যের ভিত্তিতে তৈরি। প্রতিটি তথ্যের মূল সোর্স লিংক দেওয়া আছে — যাচাই করে সিদ্ধান্ত নেওয়ার পরামর্শ থাকলো। এটি কোনো আদালতের রায় বা চূড়ান্ত সত্যতা নয়, সংবাদমাধ্যমে প্রকাশিত অভিযোগের সংকলন মাত্র।
+  </footer>
+</div>
+
+<script>
+/* ============ ১. FALLBACK DATA (আর্টিফ্যাক্ট প্রিভিউ / অফলাইন-এ ব্যবহৃত হয়; GitHub Pages-এ থাকলে live data.json ব্যবহার হবে) ============ */
+const DATA_FALLBACK = {"last_updated": "2026-09-17T08:00:00+06:00", "queries": ["বিএনপি চাঁদাবাজি", "বিএনপি নেতা দখল", "বিএনপি বহিষ্কার", "বিএনপি সন্ত্রাস", "বিএনপি মামলা নেতা"], "items": [{"id": "n001", "date": "2026-09-06", "district": "নারায়ণগঞ্জ", "leader": "মো. শুক্কুর আলী", "position": "যুগ্ম সাধারণ সম্পাদক, ওয়ার্ড বিএনপি (সোনারগাঁ)", "category": ["চাঁদাবাজি", "সরকারি সম্পত্তি অপব্যবহার"], "status": "বহিষ্কার", "headline": "চাঁদাবাজি ও ওসির সঙ্গে উগ্র আচরণের অভিযোগে সোনারগাঁয়ে বিএনপি নেতা বহিষ্কার", "source": "কালবেলা", "url": "https://www.kalbela.com/country-news/325556"}, {"id": "n002", "date": "2026-09-02", "district": "বরগুনা", "leader": "জালাল উদ্দিন ফকির, জহিরুল ইসলাম মামুন, কবির ফকির", "position": "সাবেক সভাপতি / ভারপ্রাপ্ত আহ্বায়ক / পৌর আহ্বায়ক, আমতলী উপজেলা বিএনপি", "category": ["চাঁদাবাজি", "জমি দখল", "সন্ত্রাসী কর্মকাণ্ড"], "status": "অভিযোগ (অস্বীকৃত)", "headline": "আমতলীতে বিএনপি নেতাদের বিরুদ্ধে চাঁদাবাজি ও জমি দখলের অভিযোগ", "source": "যুগান্তর", "url": "https://www.jugantor.com/bnp/914698"}, {"id": "n003", "date": "2026-07-03", "district": "গাজীপুর", "leader": "কামাল হোসেন বুলু", "position": "ভারপ্রাপ্ত সাধারণ সম্পাদক, ৪৪নং ওয়ার্ড বিএনপি", "category": ["দলীয় শৃঙ্খলা ভঙ্গ", "ঝুট ব্যবসা বিরোধ"], "status": "বহিষ্কার", "headline": "চাঁদা দাবির অভিযোগে গাজীপুরে বিএনপি নেতা বহিষ্কার", "source": "রাইজিংবিডি", "url": "https://www.risingbd.com/bangladesh/news/655080"}, {"id": "n004", "date": "2026-07-01", "district": "নারায়ণগঞ্জ", "leader": "কুহিনুর আলম", "position": "সাংগঠনিক সম্পাদক, কাঞ্চন পৌর বিএনপি (রূপগঞ্জ)", "category": ["চাঁদাবাজি", "অনৈতিক কর্মকাণ্ড"], "status": "বহিষ্কার", "headline": "রূপগঞ্জে চাঁদাবাজিসহ বিভিন্ন অভিযোগে বিএনপি নেতা বহিষ্কার", "source": "দেশ রূপান্তর", "url": "https://www.deshrupantor.com/700374"}, {"id": "n005", "date": "2026-06-28", "district": "সিলেট", "leader": "কামাল আহমেদ (চাক্কু কামাল)", "position": "যুবদল নেতা, বিয়ানীবাজার", "category": ["চাঁদাবাজি", "হামলা-ভাঙচুর", "মিথ্যা মামলায় হয়রানি"], "status": "অভিযোগ দাখিল (প্রধানমন্ত্রীর কার্যালয়ে)", "headline": "বিএনপি নেতার কাছে যুবদল নেতার চাঁদা দাবি, প্রধানমন্ত্রীর কার্যালয়ে অভিযোগ", "source": "আমার দেশ", "url": "https://www.dailyamardesh.com/politics/bnp/amd7lfisws51g"}, {"id": "n006", "date": "2026-05-06", "district": "নারায়ণগঞ্জ", "leader": "সালাউদ্দিন", "position": "সাধারণ সম্পাদক, নাসিক ১নং ওয়ার্ড বিএনপি (সিদ্ধিরগঞ্জ)", "category": ["চাঁদাবাজি", "দাঙ্গা-হাঙ্গামা"], "status": "গ্রেফতার ও বহিষ্কার", "headline": "চাঁদাবাজির অভিযোগে গ্রেফতার বিএনপি নেতা দল থেকে বহিষ্কার", "source": "যুগান্তর", "url": "https://www.jugantor.com/country-news/1098226"}, {"id": "n007", "date": "2026-02-16", "district": "লক্ষ্মীপুর", "leader": "২৬ জন নেতাকর্মী (যৌথ)", "position": "রামগতি উপজেলা বিএনপি", "category": ["সংঘবদ্ধ চাঁদাবাজি"], "status": "মামলা দায়ের, ২ জন গ্রেফতার", "headline": "রামগতিতে চাঁদাবাজি অভিযোগে বিএনপির ২৬ নেতাকর্মীর বিরুদ্ধে মামলা", "source": "দৈনিক নয়া দিগন্ত", "url": "https://dailynayadiganta.com/printed-edition/yYYkLFAZFTkz"}, {"id": "n008", "date": "2025-11-17", "district": "রাজশাহী", "leader": "টুটুল", "position": "সাবেক কাউন্সিলর ও সাবেক সহসভাপতি, শাহ মখদুম থানা বিএনপি", "category": ["চাঁদাবাজি", "জমি দখল"], "status": "অভিযোগ (অস্বীকৃত)", "headline": "রাজশাহীতে বিএনপি নেতাদের দখল ও চাঁদাবাজি", "source": "যুগান্তর", "url": "https://www.jugantor.com/country-news/907296"}, {"id": "n009", "date": "2026-08-17", "district": "চাঁদপুর", "leader": "শাহাদাত হোসেন হাওলাদার", "position": "সাধারণ সম্পাদক, ৮নং ওয়ার্ড বিএনপি", "category": ["দলীয় শৃঙ্খলা ভঙ্গ"], "status": "বহিষ্কার", "headline": "চাঁদপুরে বিএনপি নেতা বহিষ্কার", "source": "চ্যানেল ২৪", "url": "https://www.channel24bd.tv/countries/article/342626"}]};
+
+/* ============ ২. STATE ============ */
+let ALL_ITEMS = [];
+let ANCHOR_DATE = null; // dataset-এর সবচেয়ে সাম্প্রতিক তারিখ, "আজ" হিসেবে ব্যবহৃত হবে
+let currentRange = { type: "7" }; // "7" | "30" | "all" | "custom"
+let filters = { category: "", district: "", status: "", q: "" };
+
+const CATEGORY_COLORS = {
+  "চাঁদাবাজি": "#E0A72E",
+  "জমি দখল": "#C1553D",
+  "সন্ত্রাসী কর্মকাণ্ড": "#8E5BA8",
+  "বহিষ্কার / দলীয় ব্যবস্থা": "#4C9A6A",
+  "মামলা / গ্রেফতার": "#5B84A8",
+  "ঝুট ব্যবসা / চাঁদা": "#B8874A",
+  "অশ্রেণীবদ্ধ": "#6B7A87"
+};
+function catColor(cat){ return CATEGORY_COLORS[cat] || "#6B7A87"; }
+
+let trendChartRef, categoryChartRef, districtChartRef;
+
+/* ============ ৩. DATA LOAD ============ */
+async function loadData(){
+  try{
+    const res = await fetch('./data/data.json', { cache: "no-store" });
+    if(!res.ok) throw new Error("no data.json");
+    const json = await res.json();
+    document.getElementById('liveStatus').textContent = "● লাইভ ডেটা (GitHub থেকে)";
+    return json;
+  }catch(e){
+    document.getElementById('liveStatus').textContent = "● নমুনা ডেটা (demo)";
+    return DATA_FALLBACK;
+  }
+}
+
+function isActionStatus(status){
+  return /বহিষ্কার|মামলা|গ্রেফতার|অব্যাহতি|শোকজ/.test(status);
+}
+
+/* ============ ৪. INIT ============ */
+async function init(){
+  const data = await loadData();
+  ALL_ITEMS = data.items || [];
+
+  const maxItemDate = ALL_ITEMS.reduce((m,it)=> it.date > m ? it.date : m, "0000-00-00");
+  ANCHOR_DATE = new Date(maxItemDate + "T00:00:00");
+
+  document.getElementById('lastUpdated').textContent = data.last_updated
+    ? new Date(data.last_updated).toLocaleString('bn-BD', { dateStyle:'medium', timeStyle:'short' })
+    : "অজানা";
+
+  // filter dropdowns populate
+  const catSel = document.getElementById('filterCategory');
+  const distSel = document.getElementById('filterDistrict');
+  const cats = new Set(), dists = new Set();
+  ALL_ITEMS.forEach(it=>{ (it.category||[]).forEach(c=>cats.add(c)); if(it.district) dists.add(it.district); });
+  [...cats].sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o); });
+  [...dists].sort().forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; distSel.appendChild(o); });
+
+  bindControls();
+  render();
+}
+
+/* ============ ৫. CONTROLS ============ */
+function bindControls(){
+  document.querySelectorAll('#rangeBtns button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#rangeBtns button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentRange = { type: btn.dataset.range };
+      render();
+    });
+  });
+  document.getElementById('applyCustom').addEventListener('click', ()=>{
+    const from = document.getElementById('fromDate').value;
+    const to = document.getElementById('toDate').value;
+    if(from && to){
+      document.querySelectorAll('#rangeBtns button').forEach(b=>b.classList.remove('active'));
+      currentRange = { type:"custom", from, to };
+      render();
+    }
+  });
+  document.getElementById('searchBox').addEventListener('input', (e)=>{
+    filters.q = e.target.value.trim();
+    render();
+  });
+  document.getElementById('filterCategory').addEventListener('change', e=>{ filters.category=e.target.value; render(); });
+  document.getElementById('filterDistrict').addEventListener('change', e=>{ filters.district=e.target.value; render(); });
+  document.getElementById('filterStatus').addEventListener('change', e=>{ filters.status=e.target.value; render(); });
+}
+
+/* ============ ৬. রেঞ্জ ফিল্টার লজিক (date range picker এর মূল কাজ) ============ */
+function getRangeBounds(){
+  if(currentRange.type === "all") return null;
+  if(currentRange.type === "custom") return { from: currentRange.from, to: currentRange.to };
+  const days = parseInt(currentRange.type, 10);
+  const to = new Date(ANCHOR_DATE);
+  const from = new Date(ANCHOR_DATE);
+  from.setDate(from.getDate() - (days - 1));
+  return { from: from.toISOString().slice(0,10), to: to.toISOString().slice(0,10) };
+}
+
+function inRange(dateStr, bounds){
+  if(!bounds) return true;
+  return dateStr >= bounds.from && dateStr <= bounds.to;
+}
+
+function applyFilters(items){
+  return items.filter(it=>{
+    if(filters.category && !(it.category||[]).includes(filters.category)) return false;
+    if(filters.district && it.district !== filters.district) return false;
+    if(filters.status === "action" && !isActionStatus(it.status)) return false;
+    if(filters.status === "pending" && isActionStatus(it.status)) return false;
+    if(filters.q){
+      const hay = (it.headline+" "+it.leader+" "+it.district).toLowerCase();
+      if(!hay.includes(filters.q.toLowerCase())) return false;
+    }
+    return true;
+  });
+}
+
+/* ============ ৭. RENDER ============ */
+function render(){
+  const bounds = getRangeBounds();
+  const inRangeItems = ALL_ITEMS.filter(it=> inRange(it.date, bounds));
+  const visible = applyFilters(inRangeItems);
+
+  renderKPIs(visible, bounds);
+  renderTrend(inRangeItems, bounds);
+  renderCategory(visible);
+  renderDistrict(visible);
+  renderLeaderboard(visible);
+  renderWarnings(inRangeItems, bounds);
+  renderRecommendations(inRangeItems);
+  renderLedger(visible);
+}
+
+function renderKPIs(visible, bounds){
+  document.getElementById('kpiTotal').textContent = visible.length;
+  document.getElementById('kpiDistricts').textContent = new Set(visible.map(i=>i.district)).size;
+  document.getElementById('kpiPending').textContent = visible.filter(i=>!isActionStatus(i.status)).length;
+
+  // আগের সমান দৈর্ঘ্যের সময়ের সাথে তুলনা (শুধু preset range-এ, custom-এ দেখাই না)
+  const el = document.getElementById('kpiTrend');
+  if(!bounds || currentRange.type === "all" || currentRange.type === "custom"){
+    el.textContent = "—"; el.parentElement.querySelector('.delta')?.remove(); return;
+  }
+  const from = new Date(bounds.from), to = new Date(bounds.to);
+  const spanDays = Math.round((to-from)/86400000)+1;
+  const prevTo = new Date(from); prevTo.setDate(prevTo.getDate()-1);
+  const prevFrom = new Date(prevTo); prevFrom.setDate(prevFrom.getDate()-(spanDays-1));
+  const prevCount = ALL_ITEMS.filter(it=> it.date >= prevFrom.toISOString().slice(0,10) && it.date <= prevTo.toISOString().slice(0,10)).length;
+  const curCount = ALL_ITEMS.filter(it=> inRange(it.date, bounds)).length;
+  let text = "তুলনীয় ডেটা নেই";
+  if(prevCount > 0){
+    const pct = Math.round(((curCount-prevCount)/prevCount)*100);
+    text = (pct>=0 ? "▲ "+pct+"% বৃদ্ধি" : "▼ "+Math.abs(pct)+"% হ্রাস");
+    el.style.color = pct>=0 ? "var(--red)" : "var(--green)";
+  } else if(curCount>0){
+    text = "নতুন সময়কাল"; el.style.color = "var(--text)";
+  }
+  el.textContent = text;
+}
+
+function renderTrend(items, bounds){
+  const byDate = {};
+  items.forEach(it=>{ byDate[it.date] = (byDate[it.date]||0)+1; });
+  let labels = Object.keys(byDate).sort();
+  if(labels.length === 0) labels = [];
+  const values = labels.map(d=>byDate[d]);
+
+  if(trendChartRef) trendChartRef.destroy();
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  trendChartRef = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets:[{
+      data: values, borderColor:'#E0A72E', backgroundColor:'rgba(224,167,46,0.12)',
+      fill:true, tension:0.25, pointRadius:3, pointBackgroundColor:'#E0A72E'
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ ticks:{ color:'#93A2AF', font:{family:"'Hind Siliguri'"} }, grid:{ color:'#2B3B4A' } },
+        y:{ beginAtZero:true, ticks:{ color:'#93A2AF', precision:0 }, grid:{ color:'#2B3B4A' } }
+      }
+    }
+  });
+}
+
+function renderCategory(visible){
+  const counts = {};
+  visible.forEach(it=> (it.category||[]).forEach(c=> counts[c]=(counts[c]||0)+1 ));
+  const labels = Object.keys(counts);
+  const values = labels.map(l=>counts[l]);
+  const colors = labels.map(catColor);
+
+  if(categoryChartRef) categoryChartRef.destroy();
+  const ctx = document.getElementById('categoryChart').getContext('2d');
+  categoryChartRef = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data: values, backgroundColor: colors, borderColor: '#1A2733', borderWidth:2 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'right', labels:{ color:'#EDEAE2', font:{family:"'Hind Siliguri'", size:11}, boxWidth:12 } } }
+    }
+  });
+}
+
+function renderDistrict(visible){
+  const counts = {};
+  visible.forEach(it=> counts[it.district]=(counts[it.district]||0)+1 );
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const labels = sorted.map(s=>s[0]);
+  const values = sorted.map(s=>s[1]);
+
+  if(districtChartRef) districtChartRef.destroy();
+  const ctx = document.getElementById('districtChart').getContext('2d');
+  districtChartRef = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ data: values, backgroundColor:'#5B84A8', borderRadius:3, maxBarThickness:22 }]},
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ beginAtZero:true, ticks:{ color:'#93A2AF', precision:0 }, grid:{ color:'#2B3B4A' } },
+        y:{ ticks:{ color:'#EDEAE2', font:{family:"'Hind Siliguri'", size:11} }, grid:{ display:false } }
+      }
+    }
+  });
+}
+
+function renderLeaderboard(visible){
+  const counts = {};
+  visible.forEach(it=>{
+    (it.leader||"").split(/[,ও]/).map(s=>s.trim()).filter(Boolean).forEach(name=>{
+      counts[name] = (counts[name]||0)+1;
+    });
+  });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const box = document.getElementById('leaderboard');
+  if(sorted.length===0){ box.innerHTML = '<div class="empty-note">এই সময়ে পুনরাবৃত্ত নাম পাওয়া যায়নি</div>'; return; }
+  box.innerHTML = sorted.map(([name,c])=>`
+    <div class="lb-row"><span class="lb-name">${escapeHtml(name)}</span><span class="lb-count">${c}×</span></div>
+  `).join('');
+}
+
+function renderWarnings(items, bounds){
+  const box = document.getElementById('warnings');
+  const alerts = [];
+
+  // ১. Hotspot district (নির্বাচিত রেঞ্জে ৩+ ঘটনা)
+  const distCounts = {};
+  items.forEach(it=> distCounts[it.district]=(distCounts[it.district]||0)+1);
+  Object.entries(distCounts).filter(([,c])=>c>=3).sort((a,b)=>b[1]-a[1]).forEach(([d,c])=>{
+    alerts.push({ level:'high', text: `${d} জেলায় এই সময়ে ${c}টি ঘটনা রিপোর্ট হয়েছে — হটস্পট হিসেবে চিহ্নিত` });
+  });
+
+  // ২. Repeat offenders
+  const nameCounts = {};
+  items.forEach(it=> (it.leader||"").split(/[,ও]/).map(s=>s.trim()).filter(Boolean).forEach(n=> nameCounts[n]=(nameCounts[n]||0)+1));
+  Object.entries(nameCounts).filter(([,c])=>c>=2).forEach(([n,c])=>{
+    alerts.push({ level:'high', text: `"${n}" নামটি ${c} বার বিভিন্ন অভিযোগে এসেছে — পুনরাবৃত্ত সংশ্লিষ্টতা` });
+  });
+
+  // ৩. Action gap — অভিযোগ উঠেছে, ৭ দিনের বেশি হয়ে গেছে, ব্যবস্থা নেই
+  const cutoff = new Date(ANCHOR_DATE); cutoff.setDate(cutoff.getDate()-7);
+  const pendingOld = items.filter(it=> !isActionStatus(it.status) && new Date(it.date) <= cutoff);
+  if(pendingOld.length>0){
+    alerts.push({ level:'mid', text: `${pendingOld.length}টি অভিযোগ ৭ দিনের বেশি সময় ধরে কোনো দলীয় ব্যবস্থা ছাড়াই পড়ে আছে` });
+  }
+
+  box.innerHTML = alerts.length ? alerts.map(a=>`
+    <div class="alert ${a.level==='high'?'high':''}"><span class="mark">▲</span><span>${a.text}</span></div>
+  `).join('') : '<div class="empty-note">এই সময়ে কোনো গুরুতর সতর্কতা পাওয়া যায়নি</div>';
+}
+
+function renderRecommendations(items){
+  const box = document.getElementById('recommendations');
+  const recs = [];
+
+  const distCounts = {};
+  items.forEach(it=> distCounts[it.district]=(distCounts[it.district]||0)+1);
+  const topDist = Object.entries(distCounts).sort((a,b)=>b[1]-a[1])[0];
+  if(topDist && topDist[1]>=2){
+    recs.push(`${topDist[0]} জেলা কমিটির কাছ থেকে সরাসরি প্রতিবেদন চাওয়া যেতে পারে — এখানে ঘটনার ঘনত্ব সবচেয়ে বেশি`);
+  }
+
+  const catCounts = {};
+  items.forEach(it=> (it.category||[]).forEach(c=> catCounts[c]=(catCounts[c]||0)+1));
+  const topCat = Object.entries(catCounts).sort((a,b)=>b[1]-a[1])[0];
+  if(topCat){
+    recs.push(`"${topCat[0]}" — এই ধরনের অভিযোগ সবচেয়ে বেশি আসছে; এই খাতে সুনির্দিষ্ট নির্দেশনা কার্যকর হতে পারে`);
+  }
+
+  const actionCount = items.filter(it=>isActionStatus(it.status)).length;
+  const rate = items.length ? Math.round((actionCount/items.length)*100) : 0;
+  recs.push(`মোট অভিযোগের মধ্যে ${rate}% ক্ষেত্রে দলীয় ব্যবস্থা নেওয়া হয়েছে — বাকিগুলো পর্যালোচনার জন্য পাঠানো যেতে পারে`);
+
+  box.innerHTML = recs.map(r=>`<div class="rec"><span class="mark" style="color:var(--green);font-family:'Tiro Bangla',serif;">●</span><span>${r}</span></div>`).join('');
+}
+
+function renderLedger(visible){
+  const box = document.getElementById('ledger');
+  if(visible.length===0){
+    box.innerHTML = '<div class="empty-note">এই ফিল্টার/সময়সীমায় কোনো তথ্য পাওয়া যায়নি — পরিসর বা ফিল্টার বদলে দেখুন</div>';
+    return;
+  }
+  const sorted = [...visible].sort((a,b)=> b.date.localeCompare(a.date));
+  box.innerHTML = sorted.map(it=>{
+    const tags = (it.category||[]).map(c=>`<span class="tag" style="color:${catColor(c)};background:${catColor(c)}22;">${escapeHtml(c)}</span>`).join('');
+    const badge = isActionStatus(it.status)
+      ? `<span class="status-badge action">${escapeHtml(it.status)}</span>`
+      : `<span class="status-badge pending">${escapeHtml(it.status)}</span>`;
+    return `
+      <div class="ledger-row">
+        <div class="date">${it.date}</div>
+        <div class="district">${escapeHtml(it.district||'—')}</div>
+        <div class="headline">
+          <a href="${it.url}" target="_blank" rel="noopener">${escapeHtml(it.headline)}</a>
+          <div class="tags">${tags}</div>
+        </div>
+        <div class="leader">${escapeHtml(it.leader||'—')}</div>
+        <div>${badge}</div>
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+init();
+</script>
+</body>
+</html>
